@@ -1,8 +1,8 @@
 '''
 this file contains data container classes used to represent 
 metadata from excel workbook input, together with its 
-Gen3 metadata dictionary analogue, from the 2025_01_24.json version 
-of the AGDR dictionary.
+Gen3 metadata dictionary analogue, from the specific version 
+of the AGDR dictionary as specified in the dictionary name gen3.nesi_YYYY_MM_DD.json.
 '''
 
 import numbers

@@ -1,8 +1,8 @@
 '''
 The purpose of this file is to parse AGDR spreadsheets. The spreadsheet 
-templates are currently versioned. This file is for the 2024-08-28 version 
-of the AGDR metadata template, which corresponds to the 2024-09-10 version 
-of the AGDR metadata dictionary.
+templates are currently versioned. 
+This file is for the 2025_03_20 version  of the AGDR metadata template, 
+which corresponds to the 2025-01-24 version of the AGDR metadata dictionary.
 '''
 import datetime
 import sys

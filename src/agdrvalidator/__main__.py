@@ -81,7 +81,10 @@ def main():
     excelpath = args.spreadsheet
     try:
         metadata = AgdrSpreadsheetParser(excelpath, project=project)
-        print(f"VALIDATOR VERSION: \t\t{version.version(metadata.version)}\n")
+        validator_spreadsheet_version = "2025_03_20"
+        print(f"VALIDATOR VERSION: \t\t{version.version(validator_spreadsheet_version)}\n")
+        if metadata.version != validator_spreadsheet_version:
+            print(f"Note the spreadsheet version {metadata.version} does not correspond to the one used in the validator. \n")
         metadata.parse()
     except FileNotFoundError:
         print(f"The file at {excelpath} was not found. Please check the file path and try again.")
