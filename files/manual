@@ -1,5 +1,4 @@
-Introduction
-============
+# Introduction
 
 The Aotearoa Genomics Data Repository (AGDR) [https://docs.agdr.org.nz/](https://docs.agdr.org.nz/) manages metadata as described by a regularly updated dictionary [https://data.agdr.org.nz/DD](https://data.agdr.org.nz/DD) . This dictionary ensures that all crucial information enabling reuse of genomic data is captured alongside the data. It consists of various nodes, each with mandatory and optional properties, collectively forming the metadata.
 
@@ -13,8 +12,16 @@ NeSI also offers a tool called the AGDR Validator, which checks the correctness 
 
 This document explains how to use the AGDR Validator and what to do with the output files.
 
-How to use the AGDR Validator
-=============================
+# Table of contents
+
+1. [How to use the AGDR Validator](#how-to-use-the-agdr-validator)
+2. [AGDR Dictionary Specificities](#agdr-dictionary-specificities)
+3. [How to read the outputs](#how-to-read-the-outputs)
+4. [Creating an executable from the repo](#creating-an-executable-from-the-repo)
+
+
+# How to use the AGDR Validator
+
 
 The AGDR Validator is available for download from the AGDR documentation [https://docs.agdr.org.nz/](https://docs.agdr.org.nz/). It is an executable file.
 
@@ -59,17 +66,17 @@ options:
 
 -v, --validate validate the input file. -v will generate a report with all detected errors; -vv will generate a report with all detected errors and warnings. Default is 0. 
 
---version show program's version number and exit`
+--version show program's version number and exit
 
-AGDR Dictionary Specificities
-=============================
+# AGDR Dictionary Specificities
+
 
 - In the AGDR dictionary, a genome specimen_id or metagenome metagenomic_id can be connected to more than 1 experiment at a time.  
 In that case, in the experiment_name field, enter all the experiment names separated by comma  
 e.g. MYEXPERIMENT0001, MYEXPERIMENT0003,MYEXPERIMENT0004
 
-How to read the outputs
-=======================
+# How to read the outputs
+
 
 The first feedback displayed on the terminal will be the version of the validator in the format MAJOR.MINOR.SPREADSHEET.DICTIONARY. If you encounter any issues with the validator, please report this version number.
 
@@ -123,11 +130,25 @@ Value 'Living Specimen' is not in allowed values \['PreservedSpecimen', 'FossilS
 
 Modify the value in cellJ17for the genome 68158 in the spreadsheet to one of the permitted values.
 
-Notes and warnings
-==================
+## Notes and warnings
+
 
 If you open the template filled in or any of the tsv files created by the validator into Microsoft Excel or other editors, be aware that the values of certain columns may be modified and not compatible with the AGDR ingest tool.
 
 *   Special characters (e.g. Maori words containing macrons) may not be rendered properly in certain editors. When you are providing the template filled in and checked back to the AGDR team, make sure that the special characters are properly displayed.
     
 *   False/True - AGDR wants all boolean to be lowercase. The validator is managing capitalised boolean but if you are providing tsv files, please make sure that the font of the booleans is as expected.
+
+# Creating an executable from the repo
+
+`cd src/agdrvalidator`
+
+`pyinstaller --onefile --add-data=data/dictionaries/gen3.nesi_2025_01_24.json:agdrvalidator/data/dictionaries --name agdrvalidatorx_y __main__.py`
+
+with *x.y* corresponding to the main version of the validator in the version file
+
+`pyinstaller agdrvalidatorx_y.spec`
+
+You will need to have your computer trusting the executable created.
+
+e.g. for MacOS `xattr -dr com.apple.quarantine <binary_path_and_name>`
