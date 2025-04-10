@@ -61,7 +61,12 @@ options:
 
 --version show program's version number and exit`
 
+AGDR Dictionary Specificities
+=============================
 
+- In the AGDR dictionary, a genome specimen_id or metagenome metagenomic_id can be connected to more than 1 experiment at a time.  
+In that case, in the experiment_name field, enter all the experiment names separated by comma  
+e.g. MYEXPERIMENT0001, MYEXPERIMENT0003,MYEXPERIMENT0004
 
 How to read the outputs
 =======================

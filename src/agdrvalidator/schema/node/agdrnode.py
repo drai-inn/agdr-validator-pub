@@ -288,12 +288,14 @@ class AGDR(SpreadsheetNode):
     
     def _extract_spreadsheet_name(self, data:SpreadsheetNode):
         sheet_name = set()
+
         for row in data.data:
             sheet_name.add(row.sheet_name)
         if len(sheet_name) > 1:
-            # TODO: add to validation errors, something wrong with the data
-            #raise AGDRValidationError("Multiple sheets found for Project node")
+            print(f"len(sheet_name) {len(sheet_name)} \n")
             raise Exception(f"spreadsheet parsing error; multiple sheets listed for {data.name} node")
+        if not sheet_name:
+            return None
         return sheet_name.pop()
 
     def _generate_property(self, name, value, g3property:Gen3Property):
@@ -840,11 +842,9 @@ class AGDR(SpreadsheetNode):
                 #checks
                 if pd.notna(property_age.data): # Checking for field with not NaN as a value
                     property_dev_stage.required = False
-                    print(f"1\n")
                 elif pd.notna(property_dev_stage.data): # Checking for field with not NaN as a value
                     property_age.required = False
                     property_unit.required = False
-                    print(f"2\n")
                 
                 agdr_age = AGDRProperty(property_age, g3prop)
                 agdr_age_unit = AGDRProperty(property_unit, g3prop)

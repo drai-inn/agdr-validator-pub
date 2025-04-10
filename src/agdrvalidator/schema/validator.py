@@ -196,6 +196,8 @@ class AGDRValidator(Schema):
         alleviate performance issues for large datasets.
         '''
         connected_node_names = set()
+        no_match_list = set()
+        match_list = set()
         for parent_type in node_type.getParents():
             if str(parent_type.name).lower() == "program":
                 continue
@@ -210,8 +212,9 @@ class AGDRValidator(Schema):
             if len(node_list) > 0:
                 lookup_props = getParentUniqueIdProperties(node_list[0].name)
             else:
-                logger.debug(f"no nodes of type {node_type.name} found in metadata graph")
+                logger.debug(f"no nodes of type {node_type.name} found in metadata graph")           
             for pp in potential_parents:
+                pp_unique_id = pp.metadata.uniqueId().lower().strip()
                 # check if parent's primary key matches any of the children 
                 # (this way, we loop through the parents only once)
                 for lookup_prop in lookup_props:
@@ -222,33 +225,57 @@ class AGDRValidator(Schema):
                         if node.metadata.getProperty(lookup_prop).get_value() == np.nan:
                             print(f"property {lookup_prop} is nan in node {node.name}")
                             continue
-                        if pp.metadata.uniqueId().lower().strip() == str(node.metadata.getProperty(lookup_prop).get_value()).lower().strip():
-                            node.addParent(pp)
-                            pp.addChild(node)
-                            node_id = node.metadata.getProperty('submitter_id').get_value() 
-                            progress_bar(( progress_count + len(connected_node_names) )/ progress_total)
-                            connected_node_names.add(node_id)
+                        lookup_values = node.metadata.getProperty(lookup_prop).get_value().lower().strip()
+                        # Check if lookup_values is a string and split it into a list if it contains commas - in case of multiple connections
+                        if isinstance(lookup_values, str) and ',' in lookup_values:
+                            lookup_values = [value.strip() for value in lookup_values.split(',')]
+                        else:
+                            lookup_values = [lookup_values]
+                        # Iterate over the list of values and perform the check
+                        #print(f"lookup_values: {lookup_values}\n")
+                        for value in lookup_values:
+                            value_lower = str(value).lower().strip()
+                            if pp_unique_id == value_lower:
+                                #print(f"Potential Parent: {pp.metadata.uniqueId().lower().strip()}\n")
+                                node.addParent(pp)
+                                pp.addChild(node)
+                                node_id = node.metadata.getProperty('submitter_id').get_value()
+                                progress_bar((progress_count + len(connected_node_names)) / progress_total)
+                                connected_node_names.add(node_id)
+                                match_list.add((value_lower,node_id,node.name))
+                                #no_match_list = [item for item in no_match_list if item['parent'] != pp_unique_id]
+                                break # Exit the loop once a match is found
+                            else:
+                                no_match_list.add((value_lower,node.metadata.getProperty('submitter_id').get_value(),node.name))
+                    no_match_list -= match_list
         else:
             orphans = []
+            reported_errors = set()
+            msg = None
+            if no_match_list:
+                for parent, submitter_id, node_name in no_match_list:
+                    msg = f"INFO:\tno link found connecting parent [{parent}] link to child [{submitter_id}], check parent exists."
+                    logger.debug(msg)
+                    entry = ValidationEntry(ValidationError.ERROR, msg)
+                    if msg not in reported_errors:
+                        self._report_header(node_name)
+                        self._report_node(entry)
+                    reported_errors.add(msg)
             for node in node_list:
                 if node.name.lower() == "project":
                     continue
                 if node.metadata.getProperty('submitter_id').get_value() not in connected_node_names:
                     orphans.append(node)
-
             orphan_count = 0
-            reported_errors = set()
             for node in orphans:
                 for plink in node.metadata.gen3node.getParentLinks():
-                    node_id = node.metadata.getProperty('submitter_id').get_value()
-                    entry = None
                     msg = None
+                    entry = None
+                    node_id = node.metadata.getProperty('submitter_id').get_value()
                     if plink.requiredtype == RequiredType.OPTIONAL:
                         msg = f"INFO:\tno optional link found connecting parent [{plink.node_id}] link to child [{node.name}:{node_id}]"
                         logger.debug(msg)
                         entry = ValidationEntry(ValidationError.INFO, msg)
-
-                        validationError = False
                     else:
                         msg = f"ERROR:\tno REQUIRED link found connecting parent [{plink.node_id}] link to child [{node.name}:{node_id}]"
                         logger.info(msg)
@@ -258,10 +285,10 @@ class AGDRValidator(Schema):
                         self._node_validation_errors[node.name] = {}
                     if node_id not in self._node_validation_errors[node.name]:
                         self._node_validation_errors[node.name][node_id] = []
-                    if msg not in reported_errors:
+                    if msg not in reported_errors: #to avoid to do it twice
                         self._node_validation_errors[node.name][node_id].append(entry)
                     reported_errors.add(msg)
-
+                    
                 orphan_count += 1
                 progress_bar(( orphan_count + progress_count + len(connected_node_names) )/ progress_total)
 

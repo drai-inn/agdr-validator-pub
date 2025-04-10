@@ -293,23 +293,31 @@ class Agdr(Parser):
         text is found
         '''
         tab_name = "NeSI_internal_use"
-        # open the sheet
-        sheet = pd.read_excel(self.pd_excel, tab_name)
-        rows, _ = sheet.shape
-        version_string = None
+        # open the sheet      
+        try:
+            sheet = pd.read_excel(self.pd_excel, tab_name)        
+        except ValueError as e:
+            print(f"Error: The sheet '{tab_name}' does not exist in the Excel file.")
+            sheet = None # or handle the error as needed
 
-        skipped_empty_lines = False
-        for r in range(rows):
-            # if row is empty, skip
-            if pd.isna(sheet.loc[r].iat[0]):
-                if skipped_empty_lines:
-                    return version_string
-                else: continue
-            else:
-                skipped_empty_lines = True
-            
-            version_string = str(sheet.loc[r].iat[0]).strip()
-        return version_string
+        if sheet is not None:
+            rows, _ = sheet.shape
+            version_string = None
+
+            skipped_empty_lines = False
+            for r in range(rows):
+                # if row is empty, skip
+                if pd.isna(sheet.loc[r].iat[0]):
+                    if skipped_empty_lines:
+                        return version_string
+                    else: continue
+                else:
+                    skipped_empty_lines = True
+                
+                version_string = str(sheet.loc[r].iat[0]).strip()
+            return version_string
+        else:
+            return 0
 
     def _parse_tab(self, tab_name):
         if str(tab_name).lower() == "project":
