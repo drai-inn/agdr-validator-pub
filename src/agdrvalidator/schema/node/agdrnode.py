@@ -827,18 +827,28 @@ class AGDR(SpreadsheetNode):
 
                 # ** age
                 g3prop = self.gen3node.getProperty("age")
-                property = row.get("** age")
-                agdr_age = AGDRProperty(property, g3prop)
-
+                property_age = row.get("** age")
+                
                 # ** age_unit
                 g3prop = self.gen3node.getProperty("age_unit")
-                property = row.get("age_unit")
-                agdr_age_unit = AGDRProperty(property, g3prop)
-
+                property_unit = row.get("age_unit")
+                
                 # ** dev_stage
                 g3prop = self.gen3node.getProperty("developmental_stage")
-                property = row.get("** dev_stage")
-                agdr_developmental_stage = AGDRProperty(property, g3prop)
+                property_dev_stage = row.get("** dev_stage")
+                
+                #checks
+                if pd.notna(property_age.data): # Checking for field with not NaN as a value
+                    property_dev_stage.required = False
+                    print(f"1\n")
+                elif pd.notna(property_dev_stage.data): # Checking for field with not NaN as a value
+                    property_age.required = False
+                    property_unit.required = False
+                    print(f"2\n")
+                
+                agdr_age = AGDRProperty(property_age, g3prop)
+                agdr_age_unit = AGDRProperty(property_unit, g3prop)
+                agdr_developmental_stage = AGDRProperty(property_dev_stage, g3prop)
 
                 # birth_date
                 g3prop = self.gen3node.getProperty("birth_date")
