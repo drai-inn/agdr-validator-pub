@@ -2,6 +2,7 @@
 this file contains data container classes used to represent 
 metadata from excel workbook input.
 '''
+import re
 import sys
 
 import pandas as pd
@@ -753,6 +754,7 @@ class AGDR(SpreadsheetNode):
                 # specimen_id
                 g3prop = self.gen3node.getProperty("submitter_id")
                 property = row.get("specimen_id")
+                property.data = re.sub(r'\s*,\s*', ',', property.data)
                 agdr_submitter_id = AGDRProperty(property, g3prop)
                 self._unique_id = property.data
 
@@ -1111,6 +1113,7 @@ class AGDR(SpreadsheetNode):
                 # experiment_name
                 g3prop = self.gen3node.getProperty("experiment") # experiment.submitter_id
                 property = row.get("experiment_name")
+                property.data = re.sub(r'\s*,\s*', ',', property.data)
                 agdr_experiment = AGDRProperty(property, g3prop)
                 agdr_experiment.gen3_name = "experiment.submitter_id" # override name
 
