@@ -181,6 +181,5 @@ The AGDR validator is dependent on 2 major components
 		- sixth row and below: a number of rows of attributes representing the researcher own data. 
         The table is finished by an empty row.  
         Note: another table may be started just below, it is important to keep the rows intact in case of deletion of cells.  
-
-
-Thank you to Eirian Perkins to have created the first version which this validator is based on. 
+  - If a mandatory field that accepts string values does not yet have a value, please use the keyword 'unknown' as a placeholder.
+ 

@@ -75,6 +75,9 @@ options:
 In that case, in the experiment_name field, enter all the experiment names separated by comma  
 e.g. MYEXPERIMENT0001, MYEXPERIMENT0003,MYEXPERIMENT0004
 
+- If a mandatory field that accepts string values does not yet have a value, please use the keyword 'unknown' as a placeholder.  
+
+
 # How to read the outputs
 
 
