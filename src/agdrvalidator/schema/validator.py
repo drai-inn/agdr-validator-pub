@@ -458,7 +458,7 @@ class AGDRValidator(Schema):
                 for message in reasons:
                     if message:
                         print(f"\t{message}")
-        
+                        
     def _validateSchema(self, verbose, outputfile=None):
         '''
         This is a schema level validation, checking that the graph
@@ -498,6 +498,7 @@ class AGDRValidator(Schema):
                     if submitter_id in submitter_ids:
                         node_id = submitter_id
                         msg = f"ERROR: duplicate submitter_id found for {node_type} node: {submitter_id}"
+                        logger.warning(msg)
                         entry = ValidationEntry(ValidationError.ERROR, msg)
                         self._validation_errors_detected = True
 
@@ -507,6 +508,20 @@ class AGDRValidator(Schema):
                             self._node_validation_errors[node.name][node_id] = []
                         self._node_validation_errors[node.name][node_id].append(entry)
                     submitter_ids.add(submitter_id)
+                
+                    # additional check: sample must have associated file then a least a child
+                    if node.name == "sample" and not node.children:
+                        node_id = submitter_id
+                        msg = f"WARNING: Sample [{node.metadata.getProperty('submitter_id').get_value()}] has no associated file nodes (no children found)."
+                        logger.warning(msg)
+                        entry = ValidationEntry(ValidationError.ERROR, msg)
+                        self._validation_errors_detected = True
+
+                        if node.name not in self._node_validation_errors:
+                            self._node_validation_errors[node.name] = {}
+                        if node_id not in self._node_validation_errors[node.name]:
+                            self._node_validation_errors[node.name][node_id] = []
+                        self._node_validation_errors[node.name][node_id].append(entry)
 
 
                 header_reported = False
@@ -532,9 +547,11 @@ class AGDRValidator(Schema):
                                         header_reported = True
                                     self._validation_errors_detected = True
                                     self._report_node(entry)
-
+                                        
                     # node-based validation (all required properties are present)
                     self._report_node_properties(node_type, node, verbose)
+                    
                 bar()
             else:
                 self._report_complete()
+
