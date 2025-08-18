@@ -12,7 +12,7 @@ REQUIREMENTS = (HERE / "requirements.txt").read_text().splitlines()
 # This call to setup() does all the work
 setup(
     name="agdrvalidator",
-    version="1.4a",
+    version="1.5",
     description="Spreadsheet Validation App",
     long_description=README,
     long_description_content_type="text/markdown",
