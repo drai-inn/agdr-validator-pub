@@ -162,6 +162,8 @@ class Agdr(Parser):
                     cell = pyxl_sheet[str(cl)]
                     logger.debug(cell)
                     logger.debug(cell.value)
+                    if isinstance(value, str):
+                        value = value.strip()                    
                     name = headers[index].name
                     required = headers[index].required
                     sp = SpreadsheetProperty(name, value, cl, required)
