@@ -458,7 +458,7 @@ class AGDRValidator(Schema):
                 for message in reasons:
                     if message:
                         print(f"\t{message}")
-                        
+
     def _validateSchema(self, verbose, outputfile=None):
         '''
         This is a schema level validation, checking that the graph
@@ -523,7 +523,6 @@ class AGDRValidator(Schema):
                             self._node_validation_errors[node.name][node_id] = []
                         self._node_validation_errors[node.name][node_id].append(entry)
 
-
                 header_reported = False
 
                 # report validation errors
@@ -554,4 +553,3 @@ class AGDRValidator(Schema):
                 bar()
             else:
                 self._report_complete()
-
