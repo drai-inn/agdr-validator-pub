@@ -99,7 +99,7 @@ Below is non-exhaustive list of possible errors that need to be fixed:
 `EXPERIMENT   
 ERROR:no REQUIRED link found connecting parent \[dataset\] link to child \[experiment:experiment\_name\]`
 
-The experiment section needs to refer to one of the datasets as listed in the project tab of the spreadsheet in the Datasets section.
+The experiment section needs to refer to one of the datasets as listed in the project tab of the spreadsheet in the Datasets section or the dataset_id in the project tab is missing.
 
 *   Incorrect format
     
@@ -132,6 +132,18 @@ Ensure that all unique identifier (as the dataset names, the experiment names, s
 Value 'Living Specimen' is not in allowed values \['PreservedSpecimen', 'FossilSpecimen', 'LivingSpecimen', 'MaterialSample', 'HumanObservation', 'MachineObservation', 'Occurrence', 'MaterialCitation', 'Unknown'\] at sheet \[experiments\_genomic\] - \[J17\]`
 
 Modify the value in cellJ17for the genome 68158 in the spreadsheet to one of the permitted values.
+
+*   some rows are orphans: eg. an experiment without any genome or metagenome information or a sample without any files associated 
+    
+
+`WARNING: Experiment [MI01] has no associated genome or metagenome (no children found).`
+
+Make sure that a metagenome or genome is referring to this experiment.
+
+`WARNING: Sample [SR41] has no associated file nodes (no children found).`
+
+Make sure that sample SR41 has a file associated in the files_instruments tab.
+
 
 ## Notes and warnings
 

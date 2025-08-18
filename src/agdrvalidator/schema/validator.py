@@ -524,6 +524,20 @@ class AGDRValidator(Schema):
                         if node_id not in self._node_validation_errors[node.name]:
                             self._node_validation_errors[node.name][node_id] = []
                         self._node_validation_errors[node.name][node_id].append(entry)
+                        
+                    # additional check: experiment must have either a genome or a metagenome (atleast a child)
+                    if node.name == "experiment" and not node.children:
+                        node_id = submitter_id
+                        msg = f"WARNING: Experiment [{node.metadata.getProperty('submitter_id').get_value()}] has no associated genome or metagenome (no children found)."
+                        logger.warning(msg)
+                        entry = ValidationEntry(ValidationError.ERROR, msg)
+                        self._validation_errors_detected = True
+
+                        if node.name not in self._node_validation_errors:
+                            self._node_validation_errors[node.name] = {}
+                        if node_id not in self._node_validation_errors[node.name]:
+                            self._node_validation_errors[node.name][node_id] = []
+                        self._node_validation_errors[node.name][node_id].append(entry)
 
                 header_reported = False
 
