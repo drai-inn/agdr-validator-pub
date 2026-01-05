@@ -7,7 +7,7 @@ from agdrvalidator.parser.dictionary.gen3parser import Gen3 as Gen3Dictionary
 
 def loadDictionary():
     location = os.path.dirname(os.path.realpath(__file__))
-    dict_file = os.path.join(location, "gen3.nesi_2025_01_24.json")
+    dict_file = os.path.join(location, "gen3.nesi_2025_09_01.json")
     g3dict = Gen3Dictionary(dict_file)
     schema = g3dict.parse()
     return schema

@@ -6,5 +6,5 @@ This file provides the version of the package, in the format:
 def version(spreadsheet=None):
     if not spreadsheet:
         spreadsheet = "unknown"
-    nesi_version = f"1.5.{spreadsheet}.2025_01_24"
+    nesi_version = f"1.6.{spreadsheet}.2025_09_01"
     return nesi_version

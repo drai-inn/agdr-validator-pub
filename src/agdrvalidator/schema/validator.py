@@ -237,7 +237,7 @@ class AGDRValidator(Schema):
                         #print(f"lookup_values: {lookup_values}\n")
                         for value in lookup_values:
                             value_lower = str(value).lower().strip()
-                            if pp_unique_id == value_lower:
+                            if pp_unique_id in value_lower:
                                 #print(f"Potential Parent: {pp.metadata.uniqueId().lower().strip()}\n")
                                 node.addParent(pp)
                                 pp.addChild(node)
