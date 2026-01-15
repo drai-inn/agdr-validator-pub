@@ -48,7 +48,9 @@ build:macos:
     - python3 -m venv venv
     - source venv/bin/activate
     - pip install pyinstaller
-    - pyinstaller --onefile --add-data=data/dictionaries/gen3.nesi_2025_09_01.json:agdrvalidator/data/dictionaries  --name ${APP_NAME}-mac __main__.py
+    -  pip install alive-progress
+    - pyinstaller --onefile --add-data=data/dictionaries/gen3.nesi_2025_09_01.json:agdrvalidator/data/dictionaries  --hidden-import alive_progress  --name ${APP_NAME}-mac __main__.py
+    
     - ls dist
     - xattr -dr com.apple.quarantine ./dist/${APP_NAME}-mac
     - cd ..
