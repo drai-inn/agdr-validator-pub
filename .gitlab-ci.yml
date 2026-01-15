@@ -28,9 +28,9 @@ build:windows:
     - pyinstaller --onefile --add-data=data/dictionaries/gen3.nesi_2025_09_01.json:agdrvalidator/data/dictionaries  --name ${APP_NAME}-win __main__.py
     - cd ..
     - cd ..
-    - cp src/agdrvalidator/dist/${APP_NAME}-win.exe  ${APP_NAME}-win.exe
+    - cp src/agdrvalidator/dist/${APP_NAME}_win.exe  ${APP_NAME}_win.exe
     - dir
-    - ${APP_NAME}-win -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v
+    - ${APP_NAME}_win -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v
 
   artifacts:
     paths:
