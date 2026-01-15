@@ -33,7 +33,7 @@ build:windows:
 
   artifacts:
     paths:
-      - dist/
+      - ${APP_NAME}-win.exe
     expire_in: 1 day
   when: manual
   allow_failure: true
