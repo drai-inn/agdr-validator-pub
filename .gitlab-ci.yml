@@ -36,7 +36,7 @@ build:windows:
 build:macos:
   stage: build
   tags:
-    - macos
+    - saas-macos-large-m2pro
   script:
     - cd src/agdrvalidator
     - python3 -m venv venv
