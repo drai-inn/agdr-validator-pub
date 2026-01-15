@@ -47,7 +47,7 @@ build:macos:
     - xattr -dr com.apple.quarantine ./dist/${APP_NAME}-mac
   artifacts:
     paths:
-      - dist/
+      - ./dist/*
     expire_in: 1 day
   when: manual
   allow_failure: true
