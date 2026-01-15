@@ -28,6 +28,9 @@ build:windows:
     - cd ..
     - cd ..
     - cp src/agdrvalidator/dist/${APP_NAME}-win  ${APP_NAME}-win
+    - dir
+    - ./${APP_NAME}-win -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v
+
   artifacts:
     paths:
       - dist/
@@ -51,7 +54,8 @@ build:macos:
     - cd ..
     - cd ..
     - cp src/agdrvalidator/dist/${APP_NAME}-mac  ${APP_NAME}-mac
-    - ${APP_NAME}-mac -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v
+    - ls
+    - ./${APP_NAME}-mac -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v
   artifacts:
     paths:
       - ${APP_NAME}-mac
