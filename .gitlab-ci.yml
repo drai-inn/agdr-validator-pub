@@ -29,7 +29,7 @@ build:windows:
     - cd ../..
     - cp "src/agdrvalidator/dist/$env:APP_NAME-win.exe" "$env:APP_NAME-win.exe"
     - dir
-    - "& \".\\$env:APP_NAME-win.exe\" -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v"
+    #- "& \".\\$env:APP_NAME-win.exe\" -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v"
   artifacts:
     paths:
       - ${APP_NAME}-win.exe
@@ -56,7 +56,7 @@ build:macos:
     - cd ..
     - cp src/agdrvalidator/dist/${APP_NAME}-mac  ${APP_NAME}-mac
     - ls
-    #- ./${APP_NAME}-mac -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v
+    - ./${APP_NAME}-mac -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v
   artifacts:
     paths:
       - ${APP_NAME}-mac
