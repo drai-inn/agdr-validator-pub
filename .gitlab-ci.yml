@@ -23,7 +23,7 @@ build:windows:
     - saas-windows-medium-amd64
   script:
     - cd src/agdrvalidator
-    - pip install -r requirements.txt
+    - pip install pyinstaller
     - pip install -r ../../requirements.txt
     - pyinstaller --onefile --add-data=data/dictionaries/gen3.nesi_2025_09_01.json:agdrvalidator/data/dictionaries  --name ${APP_NAME}-win __main__.py
     - cd ..
@@ -62,26 +62,6 @@ build:macos:
   artifacts:
     paths:
       - ${APP_NAME}-mac
-    expire_in: 1 day
-  when: manual
-  allow_failure: true
-
-# Build for Linux (Manual)
-build:linux:
-  stage: build
-  image: python:${PYTHON_VERSION}-slim
-  script:
-    - cd src/agdrvalidator
-    - apt-get update && apt-get install -y binutils
-    - pip install pyinstaller
-    - pip install -r ../../requirements.txt
-    - pyinstaller --onefile --add-data=data/dictionaries/gen3.nesi_2025_09_01.json:agdrvalidator/data/dictionaries  --name ${APP_NAME}-linux __main__.py
-    - cd ..
-    - cd ..
-    - cp src/agdrvalidator/dist/${APP_NAME}-linux  ${APP_NAME}-linux
-  artifacts:
-    paths:
-      - dist/
     expire_in: 1 day
   when: manual
   allow_failure: true
