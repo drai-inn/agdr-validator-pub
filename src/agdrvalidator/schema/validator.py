@@ -227,7 +227,7 @@ class AGDRValidator(Schema):
                             lookup_values = "missing value"
                             continue
                         else:
-                            lookup_values = node.metadata.getProperty(lookup_prop).get_value().lower().strip()
+                            lookup_values = str(node.metadata.getProperty(lookup_prop).get_value()).lower().strip()
                         # Check if lookup_values is a string and split it into a list if it contains commas - in case of multiple connections
                         if isinstance(lookup_values, str) and ',' in lookup_values:
                             lookup_values = [value.strip() for value in lookup_values.split(',')]

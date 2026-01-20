@@ -754,7 +754,8 @@ class AGDR(SpreadsheetNode):
                 # specimen_id
                 g3prop = self.gen3node.getProperty("submitter_id")
                 property = row.get("specimen_id")
-                property.data = re.sub(r'\s*,\s*', ',', property.data)
+
+                property.data = re.sub(r'\s*,\s*', ',', str(property.data))
                 agdr_submitter_id = AGDRProperty(property, g3prop)
                 self._unique_id = property.data
 
