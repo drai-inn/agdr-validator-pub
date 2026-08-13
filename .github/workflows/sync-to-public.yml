@@ -56,7 +56,11 @@ jobs:
             exit 1
           fi
           git remote add pub "https://x-access-token:${PUB_TOKEN}@github.com/${PUB_REPO}.git"
-          git fetch pub main --tags
+          # --no-tags is required, not cosmetic: a tag intentionally points at
+          # different commits in the two repos (real commit here, strip commit
+          # there), so fetching the mirror's tags would be refused as a clobber.
+          # Only pub/main is ever needed below.
+          git fetch --no-tags pub main
 
       - name: Show what would be published
         run: |
