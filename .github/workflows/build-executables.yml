@@ -1,8 +1,12 @@
 name: Build executables
 
 # Ported from .gitlab-ci.yml (build:windows / build:macos).
-# Both GitLab jobs were `when: manual`, so this workflow is dispatch-only.
+# Both GitLab jobs were `when: manual`, so manual dispatch is the primary trigger.
+# Pushing a tag additionally publishes the executables as public release assets.
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       python-version:
@@ -34,7 +38,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.python-version }}
+          python-version: ${{ inputs.python-version || '3.11' }}
           cache: pip
 
       - name: Install dependencies
@@ -63,7 +67,7 @@ jobs:
           name: ${{ env.APP_NAME }}-win
           path: ${{ env.APP_NAME }}-win.exe
           if-no-files-found: error
-          retention-days: ${{ inputs.retention-days }}
+          retention-days: ${{ inputs.retention-days || '1' }}
 
       # The equivalent smoke test was commented out in .gitlab-ci.yml.
       # - name: Smoke test
@@ -82,7 +86,7 @@ jobs:
               echo "| --- | --- | --- |"
               echo "| \`${APP_NAME}-win.exe\` | $(du -h "${APP_NAME}-win.exe" | cut -f1) | [Download](${{ steps.upload.outputs.artifact-url }}) |"
               echo
-              echo "Expires in ${{ inputs.retention-days }} day(s). Signing in to GitHub is required to download."
+              echo "Expires in ${{ inputs.retention-days || '1' }} day(s). **Downloading an artifact requires signing in to GitHub** — for public, anonymous downloads use the release assets instead."
             else
               echo ":x: The build failed before an artifact was produced."
             fi
@@ -100,7 +104,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.python-version }}
+          python-version: ${{ inputs.python-version || '3.11' }}
           cache: pip
 
       - name: Install dependencies
@@ -132,7 +136,7 @@ jobs:
           name: ${{ env.APP_NAME }}-mac
           path: ${{ env.APP_NAME }}-mac
           if-no-files-found: error
-          retention-days: ${{ inputs.retention-days }}
+          retention-days: ${{ inputs.retention-days || '1' }}
 
       - name: Smoke test
         continue-on-error: true
@@ -149,9 +153,59 @@ jobs:
               echo "| --- | --- | --- |"
               echo "| \`${APP_NAME}-mac\` | $(du -h "${APP_NAME}-mac" | cut -f1) | [Download](${{ steps.upload.outputs.artifact-url }}) |"
               echo
-              echo "Built on \`macos-14\` (arm64). Expires in ${{ inputs.retention-days }} day(s)."
+              echo "Built on \`macos-14\` (arm64). Expires in ${{ inputs.retention-days || '1' }} day(s)."
               echo "After downloading, run \`chmod +x ${APP_NAME}-mac\` — the execute bit is not preserved inside the artifact zip."
             else
               echo ":x: The build failed before an artifact was produced."
             fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Publishes the executables as release assets. On a PUBLIC repo these are
+  # downloadable by anyone with no GitHub account and no token — unlike Actions
+  # artifacts above, which always require an authenticated user.
+  release:
+    name: Publish release assets
+    needs: [build-windows, build-macos]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download built executables
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List assets
+        run: ls -lR dist
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
+          fi
+          gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+
+      - name: Write job summary
+        if: always()
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          BASE="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases"
+          {
+            echo "## Public downloads — \`${TAG}\`"
+            echo
+            echo "| Platform | Direct link (this tag) | Always-latest link |"
+            echo "| --- | --- | --- |"
+            echo "| Windows | [${APP_NAME}-win.exe](${BASE}/download/${TAG}/${APP_NAME}-win.exe) | \`${BASE}/latest/download/${APP_NAME}-win.exe\` |"
+            echo "| macOS | [${APP_NAME}-mac](${BASE}/download/${TAG}/${APP_NAME}-mac) | \`${BASE}/latest/download/${APP_NAME}-mac\` |"
+            echo
+            echo "[Release page](${BASE}/tag/${TAG})"
+            echo
+            echo "> These links work without a GitHub account **only while the repository is public**."
+            echo "> macOS users: \`chmod +x ${APP_NAME}-mac && xattr -d com.apple.quarantine ${APP_NAME}-mac\` (the binary is unsigned)."
           } >> "$GITHUB_STEP_SUMMARY"

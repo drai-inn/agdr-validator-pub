@@ -1,0 +1,124 @@
+name: Sync to public repo
+
+# Pushes this private repo's `main` (and tags) to the public mirror.
+# Replaces the GitLab `force_push_to_github` stage / copy_and_tag_to_github.sh.
+#
+# The two repos share history (the public repo branched at 9b87a90), so this is
+# a fast-forward push — NOT a force push. If the public repo has diverged the
+# push fails loudly rather than destroying commits there.
+#
+# Manual only by design: every run makes private commits permanently public.
+# To auto-sync on every push to main, uncomment the `push:` trigger below.
+on:
+  # push:
+  #   branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Optional tag to create at HEAD and push (e.g. v1.6). This is what triggers the release build in the public repo."
+        required: false
+        default: ""
+      dry_run:
+        description: "Show what would be pushed without pushing"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write # to push the new tag back to this private repo
+
+env:
+  PUB_REPO: drai-inn/agdr-validator-pub
+
+jobs:
+  sync:
+    name: Push main and tags to the public mirror
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # a shallow clone cannot be pushed to another repo
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add public remote
+        env:
+          PUB_TOKEN: ${{ secrets.PUB_REPO_TOKEN }}
+        run: |
+          if [ -z "$PUB_TOKEN" ]; then
+            echo "::error::Secret PUB_REPO_TOKEN is not set. See .github/workflows/sync-to-public.yml for setup."
+            exit 1
+          fi
+          git remote add pub "https://x-access-token:${PUB_TOKEN}@github.com/${PUB_REPO}.git"
+          git fetch pub main --tags
+
+      - name: Show what would be published
+        run: |
+          {
+            echo "## Sync preview"
+            echo
+            echo "\`${GITHUB_REPOSITORY}@$(git rev-parse --short HEAD)\` → \`${PUB_REPO}@main\`"
+            echo
+            echo "### Commits that would become public"
+            echo '```'
+            git log --oneline pub/main..HEAD || echo "(none — already in sync)"
+            echo '```'
+            echo "### Files changed"
+            echo '```'
+            git diff --stat pub/main..HEAD || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify fast-forward is possible
+        run: |
+          if ! git merge-base --is-ancestor pub/main HEAD; then
+            echo "::error::${PUB_REPO}@main has commits that are not in this repo's HEAD."
+            echo "::error::Reconcile manually — this workflow will not force-push over them."
+            exit 1
+          fi
+
+      - name: Push main
+        if: ${{ !inputs.dry_run }}
+        run: git push pub HEAD:refs/heads/main
+
+      - name: Create and push tag
+        if: ${{ inputs.tag != '' && !inputs.dry_run }}
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists locally, reusing it."
+          else
+            git tag -a "${TAG}" -m "Release ${TAG}"
+            # keep the private repo authoritative for tags too
+            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${TAG}"
+          fi
+          git push pub "refs/tags/${TAG}"
+
+      - name: Summarise
+        if: always()
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          {
+            echo
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "**Dry run — nothing was pushed.**"
+            else
+              echo "### Result"
+              echo "- Pushed to [${PUB_REPO}](https://github.com/${PUB_REPO})"
+              if [ -n "${TAG}" ]; then
+                echo "- Tagged \`${TAG}\` — the public repo's *Build executables* workflow is now building the release."
+                echo "- Public downloads will appear at https://github.com/${PUB_REPO}/releases/tag/${TAG}"
+              else
+                echo "- No tag given, so no release was triggered. Re-run with a \`tag\` input to publish executables."
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
