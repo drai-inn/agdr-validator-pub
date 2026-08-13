@@ -17,6 +17,10 @@ on:
         description: "How long to keep the built artifacts (GitLab: expire_in 1 day)"
         required: false
         default: "1"
+      release_tag:
+        description: "Publish a public release under this tag (e.g. v1.6). Leave empty to build artifacts only."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -166,7 +170,8 @@ jobs:
   release:
     name: Publish release assets
     needs: [build-windows, build-macos]
-    if: startsWith(github.ref, 'refs/tags/')
+    # Runs on a tag push, or on a manual dispatch that supplied a release_tag.
+    if: ${{ startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -183,17 +188,18 @@ jobs:
       - name: Create or update the release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "$TAG" --generate-notes
           fi
           gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
 
       - name: Write job summary
         if: always()
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           BASE="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases"
           {

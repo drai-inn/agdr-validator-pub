@@ -75,17 +75,40 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Verify fast-forward is possible
+      - name: Verify the public repo has not diverged
         run: |
-          if ! git merge-base --is-ancestor pub/main HEAD; then
-            echo "::error::${PUB_REPO}@main has commits that are not in this repo's HEAD."
-            echo "::error::Reconcile manually — this workflow will not force-push over them."
-            exit 1
+          PUB_TIP=$(git rev-parse pub/main)
+          # pub/main is either a plain mirror of a commit we have, or a strip
+          # commit (see below) whose parent we have. Anything else is divergence.
+          if git merge-base --is-ancestor "$PUB_TIP" HEAD; then exit 0; fi
+          if git merge-base --is-ancestor "${PUB_TIP}^" HEAD 2>/dev/null; then exit 0; fi
+          echo "::error::${PUB_REPO}@main has commits that are not in this repo's HEAD."
+          echo "::error::Reconcile manually — this workflow will not clobber them."
+          exit 1
+
+      # The public repo is a mirror of main, so anything on main becomes public.
+      # Internal-only workflows are removed on a commit layered on top, rather
+      # than being pushed and then hidden.
+      - name: Strip internal-only files
+        run: |
+          echo "ORIG_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          rm -f .github/workflows/sync-to-public.yml
+          git checkout -B mirror
+          if git diff --quiet HEAD; then
+            echo "Nothing to strip."
+          else
+            git add -A
+            git commit -m "chore: strip internal-only workflows from the public mirror"
           fi
+          git log --oneline -1
 
       - name: Push main
         if: ${{ !inputs.dry_run }}
-        run: git push pub HEAD:refs/heads/main
+        run: |
+          # Force is required because of the strip commit, but --force-with-lease
+          # pins the expected remote tip so a concurrent push is never clobbered.
+          git push pub "mirror:refs/heads/main" \
+            --force-with-lease=refs/heads/main:"$(git rev-parse pub/main)"
 
       - name: Create and push tag
         if: ${{ inputs.tag != '' && !inputs.dry_run }}
@@ -93,14 +116,19 @@ jobs:
           TAG: ${{ inputs.tag }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Private repo: tag the real commit, so this repo stays authoritative.
           if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
-            echo "Tag ${TAG} already exists locally, reusing it."
+            echo "Tag ${TAG} already exists here; leaving it where it is."
           else
-            git tag -a "${TAG}" -m "Release ${TAG}"
-            # keep the private repo authoritative for tags too
+            git tag -a "${TAG}" -m "Release ${TAG}" "${ORIG_SHA}"
             git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${TAG}"
           fi
-          git push pub "refs/tags/${TAG}"
+          # Public repo: tag the stripped mirror commit instead. Same name, and
+          # the same tree minus the internal workflow. A local scratch ref keeps
+          # the private tag above untouched.
+          git tag -f "__pub/${TAG}" mirror
+          git push --force pub "refs/tags/__pub/${TAG}:refs/tags/${TAG}"
+          echo "Pushed tag ${TAG} to ${PUB_REPO} — the release build starts there now."
 
       - name: Summarise
         if: always()
