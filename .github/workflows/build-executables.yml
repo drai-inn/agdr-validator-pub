@@ -176,6 +176,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Download built executables
         uses: actions/download-artifact@v4
         with:
@@ -185,14 +188,67 @@ jobs:
       - name: List assets
         run: ls -lR dist
 
+      # Release notes are hand-written and version-controlled under
+      # files/release_notes/. Tag v1.6 -> files/release_notes/1_6.md.
+      # The YAML frontmatter is stripped; a Downloads section is appended.
+      - name: Assemble release notes
+        id: notes
+        env:
+          TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          NOTES_FILE="files/release_notes/${VERSION//./_}.md"
+          BASE="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+
+          if [ -f "$NOTES_FILE" ]; then
+            echo "Using $NOTES_FILE"
+            # drop leading --- ... --- frontmatter, keep everything after it
+            awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
+                 fm==1 && /^---[[:space:]]*$/ {fm=2; next}
+                 fm!=1' "$NOTES_FILE" > body.md
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No release notes found at ${NOTES_FILE}. Falling back to auto-generated notes from commit history."
+            : > body.md
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo
+            echo "## Downloads"
+            echo
+            echo "| Platform | File |"
+            echo "| --- | --- |"
+            echo "| Windows | [${APP_NAME}-win.exe](${BASE}/${APP_NAME}-win.exe) |"
+            echo "| macOS (Apple silicon) | [${APP_NAME}-mac](${BASE}/${APP_NAME}-mac) |"
+            echo
+            echo "On macOS the binary is unsigned, so after downloading run:"
+            echo '```bash'
+            echo "chmod +x ${APP_NAME}-mac && xattr -d com.apple.quarantine ${APP_NAME}-mac"
+            echo '```'
+          } >> body.md
+
+          echo "--- final release body ---"
+          cat body.md
+
       - name: Create or update the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          # --generate-notes only as a fallback when no notes file exists.
+          if [ "${{ steps.notes.outputs.found }}" = "true" ]; then
+            NOTES_ARGS=(--notes-file body.md)
+          else
+            NOTES_ARGS=(--notes-file body.md --generate-notes)
+          fi
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # re-running a release refreshes its notes rather than duplicating it
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file body.md
+          else
             gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
-              --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+              --target "$GITHUB_SHA" --title "AGDR Validator ${TAG}" "${NOTES_ARGS[@]}"
           fi
           gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
 
