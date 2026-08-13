@@ -21,4 +21,6 @@ AGDR_TSV_Output*
 *_Output_*
 *_Validation_Report_*
 test/
-files/
+# NOTE: do not ignore files/ — it holds the manual, the spreadsheet templates
+# and files/release_notes/, which the release workflow reads. Generated output
+# is already covered by the *_Output_* / *_Validation_Report_* patterns above.
