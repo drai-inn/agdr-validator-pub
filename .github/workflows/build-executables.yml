@@ -1,0 +1,157 @@
+name: Build executables
+
+# Ported from .gitlab-ci.yml (build:windows / build:macos).
+# Both GitLab jobs were `when: manual`, so this workflow is dispatch-only.
+on:
+  workflow_dispatch:
+    inputs:
+      python-version:
+        description: "Python version used to build the executables"
+        required: false
+        default: "3.11"
+      retention-days:
+        description: "How long to keep the built artifacts (GitLab: expire_in 1 day)"
+        required: false
+        default: "1"
+
+permissions:
+  contents: read
+
+env:
+  APP_NAME: agdrvalidator1_6
+  DICTIONARY: gen3.nesi_2025_09_01.json
+
+jobs:
+  build-windows:
+    name: Build Windows executable
+    runs-on: windows-latest
+    # GitLab: allow_failure: true
+    continue-on-error: true
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Build with PyInstaller
+        working-directory: src/agdrvalidator
+        run: |
+          pyinstaller --onefile `
+            --add-data "data/dictionaries/${env:DICTIONARY};agdrvalidator/data/dictionaries" `
+            --name "${env:APP_NAME}-win" `
+            __main__.py
+
+      - name: Stage executable at repository root
+        run: |
+          Copy-Item "src/agdrvalidator/dist/${env:APP_NAME}-win.exe" "${env:APP_NAME}-win.exe"
+          Get-ChildItem
+
+      - name: Upload executable
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-win
+          path: ${{ env.APP_NAME }}-win.exe
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention-days }}
+
+      # The equivalent smoke test was commented out in .gitlab-ci.yml.
+      # - name: Smoke test
+      #   continue-on-error: true
+      #   run: ./${env:APP_NAME}-win.exe -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Windows executable"
+            echo
+            if [ -n "${{ steps.upload.outputs.artifact-url }}" ]; then
+              echo "| Artifact | Size | Download |"
+              echo "| --- | --- | --- |"
+              echo "| \`${APP_NAME}-win.exe\` | $(du -h "${APP_NAME}-win.exe" | cut -f1) | [Download](${{ steps.upload.outputs.artifact-url }}) |"
+              echo
+              echo "Expires in ${{ inputs.retention-days }} day(s). Signing in to GitHub is required to download."
+            else
+              echo ":x: The build failed before an artifact was produced."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build-macos:
+    name: Build macOS executable
+    runs-on: macos-14
+    # GitLab: allow_failure: true
+    continue-on-error: true
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Build with PyInstaller
+        working-directory: src/agdrvalidator
+        run: |
+          pyinstaller --onefile \
+            --add-data "data/dictionaries/${DICTIONARY}:agdrvalidator/data/dictionaries" \
+            --name "${APP_NAME}-mac" \
+            __main__.py
+          ls -l dist
+          xattr -dr com.apple.quarantine "./dist/${APP_NAME}-mac"
+
+      - name: Stage executable at repository root
+        run: |
+          cp "src/agdrvalidator/dist/${APP_NAME}-mac" "${APP_NAME}-mac"
+          chmod +x "${APP_NAME}-mac"
+          ls -l
+
+      - name: Upload executable
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-mac
+          path: ${{ env.APP_NAME }}-mac
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention-days }}
+
+      - name: Smoke test
+        continue-on-error: true
+        run: ./${APP_NAME}-mac -t -p 00103 -s files/agdrtemplate_2025_03_20.xlsx -v
+
+      - name: Write job summary
+        if: always()
+        run: |
+          {
+            echo "## macOS executable"
+            echo
+            if [ -n "${{ steps.upload.outputs.artifact-url }}" ]; then
+              echo "| Artifact | Size | Download |"
+              echo "| --- | --- | --- |"
+              echo "| \`${APP_NAME}-mac\` | $(du -h "${APP_NAME}-mac" | cut -f1) | [Download](${{ steps.upload.outputs.artifact-url }}) |"
+              echo
+              echo "Built on \`macos-14\` (arm64). Expires in ${{ inputs.retention-days }} day(s)."
+              echo "After downloading, run \`chmod +x ${APP_NAME}-mac\` — the execute bit is not preserved inside the artifact zip."
+            else
+              echo ":x: The build failed before an artifact was produced."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
